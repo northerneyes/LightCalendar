@@ -11,151 +11,142 @@
 }(function($) {
 	var PROP_NAME = "lightcalendar";
 
-	function LightCalendar(containerManager) {
+	function InstanceManager(container, elements, options, defaultOptions) {
+		var that = this;
+		this.curInst = null; // The current instance in use
+		this.elements = elements;
+		this.defaultOptions = defaultOptions;
+		this.container = container;
 
-		this.regional = []; // Available regional settings, indexed by language code
-		this.regional[""] = { // Default regional settings
-			monthNames: ["January", "February", "March", "April", "May", "June",
-				"July", "August", "September", "October", "November", "December"
-			], // Names of months for formatting
-			monthNamesShort: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"], // For formatting
-			dayNames: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"], // For formatting
-			dayNamesShort: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], // For formatting
-			dayNamesMin: ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"], // Column headings for days starting at Sunday
-			weekHeader: "Wk", // Column header for week of the year
-			dateFormat: "mm/dd/yy", // See format options on parseDate
-			firstDay: 0, // The first day of the week, Sun = 0, Mon = 1, ...
-		};
-
-		this._defaults = { // Global defaults for all the date picker instances
-			showOn: "focus", // "focus" for popup on focus,
-			showAnim: "fadeIn", // Name of jQuery animation for popup
-			duration: "fast", // Duration of display/closure
-			defaultDate: null, // Used when field is blank: actual date,
-			// +/-number for offset from today, null for today
-			onSelect: null, // Define a callback function when a date is selected
-			onClose: null // Define a callback function when the datepicker is closed
-		};
-
-		$.extend(this._defaults, this.regional[""]);
-
-		this.render = new CalendarRender(this._defaults);
-		this._containerManager = new CalendarContainerManager(this.render, this._defaults);
-
-
+		this.elements.each(function() {
+			that.create(this, options);
+		});
 	}
 
-	$.extend(LightCalendar.prototype, {
+	$.extend(InstanceManager.prototype, {
+		create: function(target, options) {
+			var nodeName = target.nodeName.toLowerCase();
+			var inst = this.new($(target));
+			inst.options = $.extend({}, options || {});
 
+			$.data(target, PROP_NAME, inst);
+		},
+
+		new: function(target) {
+			var id = target[0].id;
+			return {
+				id: id,
+				input: target,
+				container: this.container
+			};
+		},
+
+		setCurrent: function(inst) {
+			this.curInst = inst;
+		},
+
+		getCurrent: function() {
+			return this.curInst;
+		},
+
+		compare: function(inst) {
+			return this.curInst === inst;
+		},
+
+		get: function(target) {
+			try {
+				return $.data(target, PROP_NAME);
+			} catch (err) {
+				throw "Missing instance data for this calendar";
+			}
+		},
+
+		options: function(inst, name) {
+			return inst.options[name] !== undefined ?
+				inst.options[name] : this.defaultOptions[name];
+		}
 	});
 
-	/*
-		CalendarContainerManager - manage state of calendar
-	*/
-	function CalendarContainerManager(render, settings) {
-		this.curInst = null; // The current instance in use
-
+	//Popup manager
+	function PopupManager(container, instanceManager, defaultOptions) {
+		var that = this;
 		this.initialized = false;
-		this.calendarID = "light-calendar-container";
-		this.container = $('<div id="' + this.calendarID + '" class="l-calendar">This is Calendar<div>');
-		this.calendarShowing = false;
-		this.lastInput = null;
-		this.defaultSettings = settings;
+		this.instanceManager = instanceManager;
+		this.container = container;
+		this.popupID = "light-popup-container";
+		this.popupShowing = false;
+		this.lastElement = null;
 
-		this.render = render;
+		this.container.attr('id', this.popupID);
+
+		if (!this.initialized) {
+			$(document).mousedown(function(event){
+				that.checkExternalClick(event)
+			});
+			this.initialized = true;
+		}
+
+		if ($("#" + this.popupID).length === 0) {
+			$("body").append(this.container);
+		}
 	}
 
-	$.extend(CalendarContainerManager.prototype, {
-		markerClassName: "hasCalendar",
-
-		/* Close date picker if clicked elsewhere. */
+	$.extend(PopupManager.prototype, {
+		markerClassName: "hasPopup",
 		checkExternalClick: function(event) {
-			if (!this.curInst) {
+			var currInst = this.instanceManager.getCurrent();
+			if (!currInst) {
 				return;
 			}
 
 			var $target = $(event.target);
-			var inst = this.getInst($target[0]);
+			var inst = this.instanceManager.get($target[0]);
 
-			this.hideCalendar();
-		},
-
-		init: function(widgets, options) {
-			var that = this;
-			if (!this.initialized) {
-				$(document).mousedown(function(event) {
-					that.checkExternalClick(event);
-				});
+			if (!$target.hasClass(this.markerClassName) && !this.instanceManager.compare(inst)) {
+				this.close();
 			}
 
-			if ($("#" + this.calendarID).length === 0) {
-				$("body").append(this.container);
-			}
-
-			return widgets.each(function() {
-				that.attachCalendar(this, options);
-			});
 		},
 
-		attachCalendar: function(target, settings) {
-			var nodeName = target.nodeName.toLowerCase();
-			var inline = (nodeName === 'div' || nodeName === 'span');
-
-			var inst = this.newInst($(target), inline);
-			inst.settings = $.extend({}, settings || {});
-			if (nodeName === 'input') {
-				this.connectCalendar(target, inst);
-			} else if (inline) {
-				// this._inlineCalendar(target, inst);
-			}
-		},
-
-		connectCalendar: function(target, inst) {
-			var input = $(target);
-
-			if (input.hasClass(this.markerClassName)) {
+		close: function() {
+			var inst = this.instanceManager.getCurrent();
+			
+			if (!inst ) {
 				return;
 			}
 
-			this.bindCalendarInstance(input, inst);
-			input.addClass(this.markerClassName);
-			$.data(target, PROP_NAME, inst);
-		},
+			if (this.popupShowing) {
+				var showAnim = this.instanceManager.options(inst, "showAnim");
+				var duration = this.instanceManager.options(inst, "duration");
 
-		bindCalendarInstance: function(input, inst) {
-			var that = this;
-			var showCalendarHander = function(event) {
-				that.showCalendar(event);
+				inst.container[(showAnim === "slideDown" ? "slideUp" :
+					(showAnim === "fadeIn" ? "fadeOut" : "hide"))]((showAnim ? duration : null));
+
+				this.popupShowing = false;
+				this.lastElement = null;
 			}
 
-			input.unbind("focus", showCalendarHander);
-
-			input.focus(showCalendarHander);
-
 		},
 
-		showCalendar: function(input) {
-			input = input.target || input;
+		open: function(element) {
+			element = element.target || element;
 
-			if (this.lastInput === input) {
+			if (this.lastElement === element) {
 				return;
 			}
 
-			var inst = this.getInst(input);
-
-			var isOtherInstance = this.curInst && this.curInst !== inst;
-			var prevCalendarIsShowing = inst && this.calendarShowing;
+			var inst = this.instanceManager.get(element);
+			var isOtherInstance = !this.instanceManager.compare(inst);
+			var prevCalendarIsShowing = inst && this.popupShowing;
 			if (isOtherInstance && prevCalendarIsShowing) {
-				this.hideCalendar(this.curInst.input[0]);
+				this.close(this.curInst.input[0]);
 			}
 
-			this.lastInput = input;
+			this.lastElement = element;
 			if (!this._pos) { // position below input
-				this._pos = this.findPos(input);
-				this._pos[1] += input.offsetHeight; // add the height
+				this._pos = this._findPos(element);
+				this._pos[1] += element.offsetHeight; // add the height
 			}
-
-			this.render.update(inst);
 
 			var offset = {
 				left: this._pos[0],
@@ -164,60 +155,32 @@
 
 			this._pos = null;
 
+
+
+			var showAnim = this.instanceManager.options(inst, "showAnim");
+			var duration = this.instanceManager.options(inst, "duration");
 			inst.container.css({
 				position: "absolute",
 				display: "none",
 				left: offset.left + "px",
-				top: offset.top + "px"
+				top: offset.top + "px",
+				"z-index": 1000
 			});
 
-			if (!inst.inline) {
-				showAnim = this.get(inst, "showAnim");
-				duration = this.get(inst, "duration");
-				inst.container.css("z-index", 1000);
-				this.calendarShowing = true;
+			inst.container[showAnim || "show"](showAnim ? duration : null);
 
-				if ($.effects && $.effects.effect[showAnim]) {
-					inst.container.show(showAnim, this.get(inst, "showOptions"), duration);
-				} else {
-					inst.container[showAnim || "show"](showAnim ? duration : null);
-				}
-
-				if (inst.input.is(":visible") && !inst.input.is(":disabled")) {
-					inst.input.focus();
-				}
-
-				this.curInst = inst;
+			if (inst.input.is(":visible") && !inst.input.is(":disabled")) {
+				inst.input.focus();
 			}
+
+			this.popupShowing = true;
+			this.instanceManager.setCurrent(inst);
 
 		},
 
-		hideCalendar: function(input) {
-			var inst = this.curInst;
-			if (!inst || (input && inst !== $.data(input, PROP_NAME))) {
-				return;
-			}
-
-			if (this.calendarShowing) {
-				var showAnim = this.get(inst, "showAnim");
-				var duration = this.get(inst, "duration");
-
-				if ($.effects && ($.effects.effect[showAnim] || $.effects[showAnim])) {
-					inst.container.hide(showAnim, this.get(inst, "showOptions"), duration);
-				} else {
-					inst.container[(showAnim === "slideDown" ? "slideUp" :
-						(showAnim === "fadeIn" ? "fadeOut" : "hide"))]((showAnim ? duration : null));
-				}
-
-				this.calendarShowing = false;
-				this.lastInput = null;
-			}
-		},
-
-		/* Find an object's position on the screen. */
-		findPos: function(obj) {
+		_findPos: function(obj) {
 			var position,
-				inst = this.getInst(obj);
+				inst = this.instanceManager.get(obj);
 
 			while (obj && (obj.type === "hidden" || obj.nodeType !== 1 || $.expr.filters.hidden(obj))) {
 				obj = obj["nextSibling"];
@@ -225,104 +188,66 @@
 
 			position = $(obj).offset();
 			return [position.left, position.top];
-		},
-
-		//utils functions
-		newInst: function(target, inline) {
-			var id = target[0].id;
-			return {
-				id: id,
-				input: target,
-				inline: inline,
-				container: this.container
-			};
-		},
-
-		getInst: function(target) {
-			try {
-				return $.data(target, PROP_NAME);
-			} catch (err) {
-				throw "Missing instance data for this datepicker";
-			}
-		},
-
-		/* Get a setting value, defaulting if necessary. */
-		get: function(inst, name) {
-			return inst.settings[name] !== undefined ?
-				inst.settings[name] : this.defaultSettings[name];
-		},
+		}
 	});
 
-	/* Calendar Render*/
-	function CalendarRender(settings) {
-		this.settings = settings;
+	//Main
+	function LightCalendar() {
+		this.container = $('<div class="l-calendar" style="display: none" >123<div>');
 	}
 
-	$.extend(CalendarRender.prototype, {
-		update: function(inst) {
-			inst.container.empty().append(this.generateHTML(inst));
-			// this.attachHandlers(inst);
-		},
-
-		generateHTML: function(inst) {
+	$.extend(LightCalendar.prototype, {
+		init: function(elements, options) {
 			var that = this;
-			var headerTemplate = '<div class="l-header"> <%this.selectedMonth%> </div>';
-			var header = TemplateEngine(headerTemplate, {
-				selectedMonth: "March"
-			});
+			this.regional = []; // Available regional settings, indexed by language code
+			this.regional[""] = { // Default regional settings
+				monthNames: ["January", "February", "March", "April", "May", "June",
+					"July", "August", "September", "October", "November", "December"
+				], // Names of months for formatting
+				monthNamesShort: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"], // For formatting
+				dayNames: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"], // For formatting
+				dayNamesShort: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"], // For formatting
+				dayNamesMin: ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"], // Column headings for days starting at Sunday
+				weekHeader: "Wk", // Column header for week of the year
+				dateFormat: "mm/dd/yy", // See format options on parseDate
+				firstDay: 0, // The first day of the week, Sun = 0, Mon = 1, ...
+			};
 
-			var contentTemplate = 
-			'<%for(var index in this.days) {%>'+
-				'<th><%this.days[index]%></th>' +
-			'<%}%>';
+			this._defaults = { // Global defaults for all the date picker instances
+				showOn: "focus", // "focus" for popup on focus,
+				showAnim: "fadeIn", // Name of jQuery animation for popup
+				duration: "fast", // Duration of display/closure
+				defaultDate: null, // Used when field is blank: actual date,
+				// +/-number for offset from today, null for today
+				onSelect: null, // Define a callback function when a date is selected
+				onClose: null // Define a callback function when the datepicker is closed
+			};
 
-			var daysHeader = TemplateEngine(contentTemplate, {
-				days: that.settings.dayNamesMin
-			})
+			$.extend(this._defaults, this.regional[""]);
 
-			htmlTemplate = '<%this.header%>' +
-								'<table class="scroll">' + 
-									'<thead>'+
-										'<tr>' +
-											'<%this.days%>' +
-										'</tr>'+
-									'</thead>' +
-								'</table>';
-			
-			var html = TemplateEngine(htmlTemplate, {
-				header: header,
-				days: daysHeader
-			});
+			this._instanceManager = new InstanceManager(this.container, elements, options, this._defaults);
+			this._popupManager = new PopupManager(this.container, this._instanceManager);
+			// this.calendar = new Calendar(instanceManager);
+			return this;
+		},
 
-			return html;
+		setOptions: function() {
+
+		},
+
+		open: function($element) {
+			// this.calendar()
+			this._popupManager.open($element[0]);
+		},
+
+		close: function() {
+			this._popupManager.close();
 		}
-
 	});
-
-	//lite weight template engine
-	var TemplateEngine = function(html, options) {
-		var re = /<%([^%>]+)?%>/g,
-			reExp = /(^( )?(if|for|else|switch|case|break|{|}))(.*)?/g,
-			code = 'var r=[];\n',
-			cursor = 0,
-			match;
-		var add = function(line, js) {
-			js ? (code += line.match(reExp) ? line + '\n' : 'r.push(' + line + ');\n') :
-				(code += line != '' ? 'r.push("' + line.replace(/"/g, '\\"') + '");\n' : '');
-			return add;
-		}
-		while (match = re.exec(html)) {
-			add(html.slice(cursor, match.index))(match[1], true);
-			cursor = match.index + match[0].length;
-		}
-		add(html.substr(cursor, html.length - cursor));
-		code += 'return r.join("");';
-		return new Function(code.replace(/[\r\t\n]/g, '')).apply(options);
-	}
 
 	/* Invoke the calendar functionality.*/
 	$.fn.lightcalendar = function(options) {
-		return $.lightcalendar._containerManager.init(this, options);
+		return $.lightcalendar.init(this, options);
 	};
 
 	$.lightcalendar = new LightCalendar(); // singleton instance

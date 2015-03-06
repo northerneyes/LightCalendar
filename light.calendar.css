@@ -5,15 +5,48 @@
 	color: #444;
 	font-weight: normal;
 	width: 20em;
-	padding: 0.2em 0.2em 0px;
+	/*padding: 0.2em 0.2em 0px;*/
+	display: inline-block;
+}
+
+.l-calendar .k-content, .l-calendar .l-content th {
+    text-align: right;
+}
+
+.l-calendar .l-content {
+    float: left;
+    border-spacing: 0px;
+    width: 100%;
+    height: 14.167em;
+    border-width: 0px;
+    margin: 0px;
+    table-layout: fixed;
+    outline: 0px none;
+}
+
+.l-calendar th {
+    background-color: #EBEBEB;
+}
+
+.l-calendar th {
+    border-bottom-style: solid;
+    border-bottom-width: 1px;
+    padding: 0.4em 0.45em 0.4em 0.1em;
+    font-weight: normal;
+    cursor: default;
 }
 
 .l-calendar .l-header{
-	margin: 0px -5px;
+	/*margin: 0px -5px;*/
 	position: relative;
     text-align: center;
 }
 
 .l-header {
     font-weight: 500;
+    border-color: #C5C5C5;
+    background-color: #E3E3E3;
+    background-image: none, linear-gradient(to bottom, rgba(255, 255, 255, 0.6) 0px, rgba(255, 255, 255, 0) 100%);
+	background-position: 50% 50%;
+	color: #2E2E2E;
 }
