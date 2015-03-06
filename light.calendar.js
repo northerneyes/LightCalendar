@@ -37,16 +37,12 @@
 			onClose: null // Define a callback function when the datepicker is closed
 		};
 
-		this._containerManager = new CalendarContainerManager(this._defaults);
-		this.render = new CalendarRender(this.regional);
-
-		this._containerManager.register({
-			ShowCalendar: function(inst) {
-				this.render.update(inst);
-			}
-		});
-
 		$.extend(this._defaults, this.regional[""]);
+
+		this.render = new CalendarRender(this._defaults);
+		this._containerManager = new CalendarContainerManager(this.render, this._defaults);
+
+
 	}
 
 	$.extend(LightCalendar.prototype, {
@@ -56,15 +52,17 @@
 	/*
 		CalendarContainerManager - manage state of calendar
 	*/
-	function CalendarContainerManager(settings) {
+	function CalendarContainerManager(render, settings) {
 		this.curInst = null; // The current instance in use
+
 		this.initialized = false;
 		this.calendarID = "light-calendar-container";
-		this.container = $('<div id="' + this.calendarID + '">This is Calendar<div>');
+		this.container = $('<div id="' + this.calendarID + '" class="l-calendar">This is Calendar<div>');
 		this.calendarShowing = false;
 		this.lastInput = null;
 		this.defaultSettings = settings;
-		this.listener = [];
+
+		this.render = render;
 	}
 
 	$.extend(CalendarContainerManager.prototype, {
@@ -157,7 +155,7 @@
 				this._pos[1] += input.offsetHeight; // add the height
 			}
 
-			this.emit("ShowCalendar", [inst]);
+			this.render.update(inst);
 
 			var offset = {
 				left: this._pos[0],
@@ -216,19 +214,6 @@
 			}
 		},
 
-		//Events
-		register: function(listener) {
-			this.listener.push(listener);
-		},
-
-		emit: function(eventName, args) {
-			$.each(this.listener, function(index, listener) {
-				if (listener[eventName]) {
-					listener[eventName].apply(this, args);
-				}
-			});
-		},
-
 		/* Find an object's position on the screen. */
 		findPos: function(obj) {
 			var position,
@@ -269,15 +254,71 @@
 	});
 
 	/* Calendar Render*/
-	function CalendarRender(regional) {
-		this.regional = regional;
+	function CalendarRender(settings) {
+		this.settings = settings;
 	}
 
 	$.extend(CalendarRender.prototype, {
-		update: function(){
+		update: function(inst) {
+			inst.container.empty().append(this.generateHTML(inst));
+			// this.attachHandlers(inst);
+		},
 
+		generateHTML: function(inst) {
+			var that = this;
+			var headerTemplate = '<div class="l-header"> <%this.selectedMonth%> </div>';
+			var header = TemplateEngine(headerTemplate, {
+				selectedMonth: "March"
+			});
+
+			var contentTemplate = 
+			'<%for(var index in this.days) {%>'+
+				'<th><%this.days[index]%></th>' +
+			'<%}%>';
+
+			var daysHeader = TemplateEngine(contentTemplate, {
+				days: that.settings.dayNamesMin
+			})
+
+			htmlTemplate = '<%this.header%>' +
+								'<table class="scroll">' + 
+									'<thead>'+
+										'<tr>' +
+											'<%this.days%>' +
+										'</tr>'+
+									'</thead>' +
+								'</table>';
+			
+			var html = TemplateEngine(htmlTemplate, {
+				header: header,
+				days: daysHeader
+			});
+
+			return html;
 		}
+
 	});
+
+	//lite weight template engine
+	var TemplateEngine = function(html, options) {
+		var re = /<%([^%>]+)?%>/g,
+			reExp = /(^( )?(if|for|else|switch|case|break|{|}))(.*)?/g,
+			code = 'var r=[];\n',
+			cursor = 0,
+			match;
+		var add = function(line, js) {
+			js ? (code += line.match(reExp) ? line + '\n' : 'r.push(' + line + ');\n') :
+				(code += line != '' ? 'r.push("' + line.replace(/"/g, '\\"') + '");\n' : '');
+			return add;
+		}
+		while (match = re.exec(html)) {
+			add(html.slice(cursor, match.index))(match[1], true);
+			cursor = match.index + match[0].length;
+		}
+		add(html.substr(cursor, html.length - cursor));
+		code += 'return r.join("");';
+		return new Function(code.replace(/[\r\t\n]/g, '')).apply(options);
+	}
 
 	/* Invoke the calendar functionality.*/
 	$.fn.lightcalendar = function(options) {
