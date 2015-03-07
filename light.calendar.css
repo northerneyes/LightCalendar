@@ -20,11 +20,6 @@
     text-align: center;
 }
 
-/*.l-calendar td
-{
-    padding: .08333em;
-}*/
-
 .l-calendar td:not(.l-disable)
 {
     cursor: pointer;
@@ -40,7 +35,10 @@
     cursor: default;
 }
 
-
+.l-calendar .l-holyday
+{
+    background: rgb(242, 242, 242);
+}
 
 .l-calendar .l-link
 {
@@ -57,7 +55,7 @@
 
 .l-calendar .l-state-selected
 {
-    background:  #421E4E;
+    background: #421e4e;
 }
 
 
@@ -105,7 +103,9 @@
 .l-calendar .l-header
 {
     position: relative;
+
     padding: 5px;
+
     text-align: center;
 }
 
@@ -133,28 +133,35 @@ th
     border: 2px solid #e7e6e7;
 }
 
-.l-start-month {
+.l-start-month
+{
     padding-top: 7px;
 }
 
 .l-calendar .l-start-month > span
 {
-  width: 10px;
-  word-wrap: break-word;
-  line-height: 1.0em;
-  font-size: 0.77em;
-  background: rgb(0, 0, 0);
-  float: left;
-  color: white;
-  left: 0;
-  padding: 2px 2px 3px 1px;
-  margin-top: -9px;
-  margin-left: -2px;
+    font-size: .77em;
+    line-height: 1.0em;
+
+    left: 0;
+
+    float: left;
+
+    width: 10px;
+    margin-top: -9px;
+    margin-left: -2px;
+    padding: 2px 2px 3px 1px;
+
+    word-wrap: break-word;
+
+    color: white;
+    background: rgb(0, 0, 0);
 }
 
 .l-grid-header
 {
     width: 100%;
+
     background-color: #ebebeb;
 }
 

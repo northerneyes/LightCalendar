@@ -158,7 +158,9 @@
 			this.instanceManager.setCurrent(inst);
 
 		},
-
+		isPopup: function($target){
+			return $target.parents('#' + this.popupID).length > 0;
+		},
 		_findPos: function(obj) {
 			var position,
 				inst = this.instanceManager.get(obj);
@@ -244,7 +246,7 @@
 			var that = this;
 			this._container.on('click', CELLSELECTOR, function(e) {
 				var $link = $(e.currentTarget).find('.l-link');
-				if ($(e.currentTarget).hasClass('l-disable') && link.length) {
+				if ($(e.currentTarget).hasClass('l-disable') && $link.length) {
 					e.preventDefault();
 					return;
 				}
@@ -252,6 +254,7 @@
 				that._click($link, inst);
 			});
 		},
+
 		_click: function($link, inst) {
 			var value = $link.data('value').split("-");
 
@@ -260,7 +263,7 @@
 			this.emit("change", [value, inst]);
 		},
 
-		scrollToSelectedDate: function(inst) {
+		scrollToSelectedDate: function() {
 			var $selected = this._container.find('.l-state-selected');
 			if ($selected.length) {
 
@@ -385,20 +388,6 @@
 			return this.firstWeekDay(curr);
 		},
 
-		first: function(date) {
-			return calendar.firstDayOfMonth(date);
-		},
-
-		last: function(date) {
-			var last = new DATE(date.getFullYear(), date.getMonth() + 1, 0),
-				first = calendar.firstDayOfMonth(date),
-				timeOffset = Math.abs(last.getTimezoneOffset() - first.getTimezoneOffset());
-			if (timeOffset) {
-				last.setHours(first.getHours() + (timeOffset / 60));
-			}
-			return last;
-		},
-
 		normalize: function(date) {
 			return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 		},
@@ -502,7 +491,9 @@
 			var $target = $(event.target);
 			var inst = this._instanceManager.get($target[0]);
 
-			if (!$target.hasClass(this.markerClassName) && !this._instanceManager.compare(inst)) {
+			if (!$target.hasClass(this.markerClassName) && 
+				!this._instanceManager.compare(inst) &&
+				!this._popupManager.isPopup($target)) {
 				this.close();
 			}
 
@@ -609,6 +600,5 @@
 	};
 
 	$.lightcalendar = new LightCalendar(); // singleton instance
-	// $.lightcalendar.initialized = false;
 	$.lightcalendar.uuid = new Date().getTime();
 }));
