@@ -13,6 +13,7 @@
 	var CELLSELECTOR = "td:has(.l-link)";
 
 	var MS_PER_DAY = 86400000;
+	var MAX_DAYS = 180;
 
 	function InstanceManager(container, defaultOptions) {
 		this.curInst = null; // The current instance in use
@@ -172,17 +173,15 @@
 	});
 
 
-	function Calendar(defaultsOptions, container, instanceManager) {
+	function Calendar(container, instanceManager) {
 		var that = this;
 		that._instanceManager = instanceManager;
 		that._container = container;
-		that.defaultsOptions = defaultsOptions;
 		that.listener = [];
 
 
 		that.cellTemplate = template('<td <%= cssClass%> ><% if(monthName !== "") { %><span> <%= monthName %> </span> <%}%><a tabindex="-1" class="l-link" href="\\#" data-value="<%= dateString %>"> <%= value %> </a></td>');
 		that.headerTemplate = template('<div class="l-header"><%= month%></div>')
-		calendar.defaultsOptions = defaultsOptions;
 	}
 
 
@@ -196,13 +195,37 @@
 		_generateHTML: function(inst) {
 			inst.options.content = this.cellTemplate;
 			inst.options.date = inst.date;
+			$.extend(inst.options, {
+				content: this.cellTemplate,
+				date: inst.date,
+				weekends: this._instanceManager.options(inst, "weekends"),
+				holidays: this._instanceManager.options(inst, "holidays"),
+				maxDays: this._instanceManager.options(inst, "maxDays"),
+				leadingRows: this._instanceManager.options(inst, "leadingRows"),
+				dayNames: this._instanceManager.options(inst, "dayNames"),
+				dayNamesMin: this._instanceManager.options(inst, "dayNamesMin"),
+				monthNamesShort: this._instanceManager.options(inst, "monthNamesShort"),
+				monthNames: this._instanceManager.options(inst, "monthNames")
+			});
+			inst.options.holidays = this._convertHolydays(inst.options.holidays);
 			var contentHtml = calendar.content(inst.options);
-			var header = calendar.title(inst.date || new Date());
+			var header = calendar.title(inst.date || new Date(), inst.options);
 			var headerHtml = this.headerTemplate({
 				month: header.toUpperCase()
 			});
 
 			return headerHtml + contentHtml;
+		},
+		
+		_convertHolydays: function(holidays){
+			if(holidays.length === 0 || $.isNumeric(holidays[0])){
+				return holidays;
+			}
+			temp = [];
+			$.each(holidays, function(index, item){
+				temp.push(calendar.normalize(item).getTime());
+			});
+			return temp;
 		},
 
 		register: function(listener) {
@@ -249,12 +272,19 @@
 				}, 0, function() {});
 			}
 
+		},
+
+		format: function(date) {
+			return this._pad(date.getDate()) + "-" + this._pad(date.getMonth() + 1) + "-" + date.getFullYear();
+		},
+
+		_pad: function(n) {
+			return (n < 10) ? ("0" + n) : n;
 		}
 	});
 
 	//render logic
 	var calendar = {
-		defaultsOptions: {},
 		firstDayOfMonth: function(date) {
 			return new DATE(
 				date.getFullYear(),
@@ -263,22 +293,23 @@
 			);
 		},
 		name: 'MONTH',
-		title: function(date) {
-			return this.defaultsOptions.monthNames[date.getMonth()] + " " + date.getFullYear();
+		title: function(date, options) {
+			return options.monthNames[date.getMonth()] + " " + date.getFullYear();
 		},
 		content: function(options) {
 			var that = this,
 				idx = 0,
 				selectedDate = options.date,
 				holidays = options.holidays,
-				// firstDayIdex = firstDay,
-				names = that.defaultsOptions.dayNames,
-				shortNames = that.defaultsOptions.dayNamesMin,
+				weekends = options.weekends,
+				names = options.dayNames,
+				shortNames = options.dayNamesMin,
+				monthShort = options.monthNamesShort,
+				maxDays = options.maxDays,
+				leadingRows = options.leadingRows,
 				start = that.firstVisibleDay(),
-				monthShort = that.defaultsOptions.monthNamesShort,
-				// firstDayOfMonth = that.first(date),
-				// lastDayOfMonth = that.last(date),
 				toDateString = that.toDateString,
+				normalize = that.normalize,
 				today = new Date(),
 				html = '<div class="l-grid-header"><table tabindex="0" class="l-grid" cellspacing="0"><thead><tr>';
 
@@ -289,40 +320,40 @@
 			today = new Date(today.getFullYear(), today.getMonth(), today.getDate()); //only date
 
 			return view({
-				cells: 180, // i think need to 180
+				cells: maxDays,
 				perRow: 7,
 				html: html += '</tr></thead><tbody><tr></tr></tbody></table></div> <div class="l-grid-content"><table tabindex="0" class="l-content" cellspacing="0"><tr>',
 				start: new Date(start.getFullYear(), start.getMonth(), start.getDate()),
-				// min: new Date(min.getFullYear(), min.getMonth(), min.getDate()),
-				// max: new DATE(max.getFullYear(), max.getMonth(), max.getDate()),
 				content: options.content, //cell render
-				// empty: options.empty, //empty cell
 				setter: that.setDate,
 				build: function(date) {
 					var cssClass = [],
 						day = date.getDay(),
 						monthName = "";
-					// linkClass = "",
-					// url = "#";
 
-					// if (date < firstDayOfMonth || date > lastDayOfMonth) {
-					// 	cssClass.push(OTHERMONTH);
-					// }
+					if (date.getTime() === normalize(today).getTime()) {
 
-					if (+date === today) {
 						cssClass.push("l-today");
 					}
 
-					if (day === 0 || day === 6) {
+					if (weekends.indexOf(day) !== -1) {
 						cssClass.push("l-weekend");
 						cssClass.push("l-disable");
 					}
+
+					if (holidays.length > 0) {
+						if (holidays.indexOf(date.getTime()) !== -1) {
+							cssClass.push("l-holyday");
+							cssClass.push("l-disable");
+						}
+					}
+
 					if (date < today) {
 						cssClass.push("l-disable");
 					}
 
 					if (selectedDate) {
-						var select = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+						var select = normalize(selectedDate);
 						if (select.getTime() === date.getTime()) {
 							cssClass.push("l-state-selected");
 						}
@@ -332,35 +363,32 @@
 						monthName = monthShort[date.getMonth()];
 						cssClass.push("l-start-month");
 					}
-					// if (hasUrl && inArray(+date, dates)) {
-					// 	url = navigateUrl.replace("{0}", kendo.toString(date, format, culture));
-					// 	linkClass = " k-action-link";
-					// }
+
 					return {
 						date: date,
 						monthName: monthName.toUpperCase(),
-						// dates: dates,
-						// title: kendo.toString(date, "D", culture),
 						value: date.getDate(),
 						dateString: toDateString(date),
 						cssClass: cssClass[0] ? ' class="' + cssClass.join(" ") + '"' : "",
-						// linkClass: linkClass,
-						// url: url
 					};
 				}
 			});
 		},
+
 		firstWeekDay: function(date) {
 			var first = date.getDate() - date.getDay() + 1; // First day is the day of the month - the day of the week
 			return new Date(date.setDate(first));
 		},
+
 		firstVisibleDay: function() {
 			var curr = new Date();
 			return this.firstWeekDay(curr);
 		},
+
 		first: function(date) {
 			return calendar.firstDayOfMonth(date);
 		},
+
 		last: function(date) {
 			var last = new DATE(date.getFullYear(), date.getMonth() + 1, 0),
 				first = calendar.firstDayOfMonth(date),
@@ -370,28 +398,22 @@
 			}
 			return last;
 		},
+
+		normalize: function(date) {
+			return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+		},
+
 		setDate: function(date, value) {
 			//next date
 			date.setTime(date.getTime() + value * MS_PER_DAY);
 		},
+
 		toDateString: function(date) {
 			return date.getFullYear() + "-" + date.getMonth() + "-" + date.getDate();
 		}
-	}
+	};
 
 	function view(options) {
-		// var idx = 0,
-		// 	data,
-		// 	min = options.min,
-		// 	max = options.max,
-		// 	start = options.start,
-		// 	setter = options.setter,
-		// 	build = options.build,
-		// 	length = options.cells || 12,
-		// 	cellsPerRow = options.perRow || 4,
-		// 	content = options.content || cellTemplate,
-		// 	empty = options.empty || emptyCellTemplate,
-		// 	html = options.html || '<table tabindex="0" role="grid" class="k-content k-meta-view" cellspacing="0"><tbody><tr role="row">';
 		var idx = 0,
 			length = options.cells,
 			cellsPerRow = options.perRow,
@@ -406,7 +428,7 @@
 				html += '</tr><tr role="row">';
 			}
 			data = build(start, idx);
-			// html += isInRange(start, min, max) ? content(data) : empty(data);
+			
 			html += content(data);
 			setter(start, 1);
 		}
@@ -419,7 +441,7 @@
 		var that = this;
 		this.initialized = false;
 
-		this.container = $('<div class="l-calendar" style="display: none" >123<div>');
+		this.container = $('<div class="l-calendar" style="display: none" ><div>');
 		this.regional = []; // Available regional settings, indexed by language code
 		this.regional[""] = { // Default regional settings
 			monthNames: ["January", "February", "March", "April", "May", "June",
@@ -429,19 +451,17 @@
 			dayNames: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"], // For formatting
 			dayNamesShort: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"], // For formatting
 			dayNamesMin: ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"], // Column headings for days starting at Sunday
-			weekHeader: "Wk", // Column header for week of the year
-			dateFormat: "mm/dd/yy", // See format options on parseDate
-			firstDay: 0, // The first day of the week, Sun = 0, Mon = 1, ...
+
 		};
 
 		this._defaults = { // Global defaults for all the date picker instances
 			showOn: "focus", // "focus" for popup on focus,
 			showAnim: "fadeIn", // Name of jQuery animation for popup
 			duration: "fast", // Duration of display/closure
-			defaultDate: null, // Used when field is blank: actual date,
-			// +/-number for offset from today, null for today
-			onSelect: null, // Define a callback function when a date is selected
-			onClose: null // Define a callback function when the datepicker is closed
+			weekends: [0],
+			holidays: [new Date(2015, 2, 11)],
+			maxDays: MAX_DAYS,
+			leadingRows: 2
 		};
 
 		$.extend(this._defaults, this.regional[""]);
@@ -453,6 +473,7 @@
 
 	$.extend(LightCalendar.prototype, {
 		markerClassName: "hasCalendar",
+
 		init: function(elements, options) {
 			var that = this;
 			this._instanceManager.init(elements, options);
@@ -508,7 +529,7 @@
 		_calendar: function(element) {
 			var that = this;
 			if (!that.calendar) {
-				that.calendar = new Calendar(that._defaults, that.container, that._instanceManager);
+				that.calendar = new Calendar(that.container, that._instanceManager);
 				that.calendar.register({
 					change: function(date, inst) {
 
@@ -521,7 +542,7 @@
 
 		setDate: function(date, inst) {
 			inst.date = date;
-			var dateString = date.getFullYear() + "-" + date.getMonth() + "-" + date.getDate();
+			var dateString = this.calendar.format(date);
 			$(inst.input).val(dateString);
 
 			this._popupManager.close();
