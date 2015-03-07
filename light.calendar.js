@@ -177,7 +177,7 @@
 		that.defaultsOptions = defaultsOptions;
 		calendar.defaultsOptions = defaultsOptions;
 
-		that.cellTemplate = template('<td <%= cssClass%> ><a tabindex="-1" class="l-link" href="\\#" data-value="<%= dateString %>"> <%= value %> </a></td>');
+		that.cellTemplate = template('<td <%= cssClass%> ><% if(monthName !== "") { %><a> <%= monthName %> </a> <%}%><a tabindex="-1" class="l-link" href="\\#" data-value="<%= dateString %>"> <%= value %> </a></td>');
 		// that._templates();
 		// that._header();
 
@@ -222,6 +222,7 @@
 				names = that.defaultsOptions.dayNames,
 				shortNames = that.defaultsOptions.dayNamesMin,
 				start = that.firstVisibleDay(),
+				monthShort = that.defaultsOptions.monthNamesShort,
 				// firstDayOfMonth = that.first(date),
 				// lastDayOfMonth = that.last(date),
 				toDateString = that.toDateString,
@@ -246,7 +247,8 @@
 				setter: that.setDate,
 				build: function(date) {
 					var cssClass = [],
-						day = date.getDay();
+						day = date.getDay(),
+						monthName = "";
 						// linkClass = "",
 						// url = "#";
 
@@ -259,6 +261,15 @@
 					}
 					if (day === 0 || day === 6) {
 						cssClass.push("l-weekend");
+						cssClass.push("l-disable");
+					}
+					if(date < today){
+						cssClass.push("l-disable");
+					}
+
+					if(date.getDate() === 1){
+						monthName = monthShort[today.getMonth()];
+						cssClass.push("l-start-month");
 					}
 					// if (hasUrl && inArray(+date, dates)) {
 					// 	url = navigateUrl.replace("{0}", kendo.toString(date, format, culture));
@@ -266,6 +277,7 @@
 					// }
 					return {
 						date: date,
+						monthName: monthName,
 						// dates: dates,
 						// title: kendo.toString(date, "D", culture),
 						value: date.getDate(),

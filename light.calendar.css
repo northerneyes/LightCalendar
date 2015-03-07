@@ -7,11 +7,24 @@
 	width: 20em;
 	/*padding: 0.2em 0.2em 0px;*/
 	display: inline-block;
+    padding: 3px;
 }
 
-.l-calendar .k-content, .l-calendar .l-content th {
-    text-align: right;
+.l-calendar .l-content,
+.l-calendar .l-content th {
+    text-align: center;
 }
+
+.l-calendar td {
+    padding: 0.08333em;
+    cursor: pointer;
+}
+
+.l-calendar td, .l-calendar .l-link {
+    text-decoration: none;
+    color: black;
+}
+
 
 .l-calendar .l-content {
     float: left;
@@ -49,4 +62,25 @@
     background-image: none, linear-gradient(to bottom, rgba(255, 255, 255, 0.6) 0px, rgba(255, 255, 255, 0) 100%);
 	background-position: 50% 50%;
 	color: #2E2E2E;
+}
+
+.l-disable {
+    opacity: 0.4
+}
+
+td, th {
+    border: 2px solid #E7E6E7;
+    height: 2.5em;
+}
+
+.l-start-month {
+/*    width: 10px;
+    word-wrap: break-word;
+    line-height: 1.1em;
+    font-size: 0.6em;
+    background: rgb(0, 0, 0);
+    float: left;
+    color: white;
+    margin: 0px;
+    margin-top: 2px;*/
 }
