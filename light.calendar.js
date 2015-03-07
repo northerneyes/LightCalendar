@@ -182,7 +182,7 @@
 		that.listener = [];
 
 
-		that.cellTemplate = template('<td <%= cssClass%> ><% if(monthName !== "") { %><span> <%= monthName %> </span> <%}%><a tabindex="-1" class="l-link" href="\\#" data-value="<%= dateString %>"> <%= value %> </a></td>');
+		that.cellTemplate = template('<td <%= cssClass %> title="<%= title %>"><% if(monthName !== "") { %><span> <%= monthName %> </span> <%}%><a tabindex="-1" class="l-link" href="\\#" data-value="<%= dateString %>"> <%= value %> </a></td>');
 		that.headerTemplate = template('<div class="l-header"><%= month%></div>')
 	}
 
@@ -278,7 +278,8 @@
 		},
 
 		format: function(date) {
-			return this._pad(date.getDate()) + "-" + this._pad(date.getMonth() + 1) + "-" + date.getFullYear();
+			var pad = calendar.pad;
+			return pad(date.getDate()) + "-" + pad(date.getMonth() + 1) + "-" + date.getFullYear();
 		},
 
 		_pad: function(n) {
@@ -303,6 +304,10 @@
 				monthShort = options.monthNamesShort,
 				maxDays = options.maxDays,
 				leadingRows = options.leadingRows,
+				monthNames = options.monthNames,
+
+				title = that.formatTitle,
+				pad = that.pad,
 				start = that.firstVisibleDay(leadingRows),
 				toDateString = that.toDateString,
 				normalize = that.normalize,
@@ -315,7 +320,7 @@
 				if (weekends.indexOf(weekDayIndex) !== -1) {
 					className = "l-disable";
 				}
-				html += '<th scope="col" title="' + names[idx] + '" class="' + className +'">' + shortNames[idx] + '</th>';
+				html += '<th scope="col" title="' + names[idx] + '" class="' + className + '">' + shortNames[idx] + '</th>';
 			}
 
 			today = new Date(today.getFullYear(), today.getMonth(), today.getDate()); //only date
@@ -368,6 +373,7 @@
 					return {
 						date: date,
 						monthName: monthName.toUpperCase(),
+						title: title(date, monthNames, names, pad),
 						value: date.getDate(),
 						dateString: toDateString(date),
 						cssClass: cssClass[0] ? ' class="' + cssClass.join(" ") + '"' : "",
@@ -400,6 +406,17 @@
 
 		toDateString: function(date) {
 			return date.getFullYear() + "-" + date.getMonth() + "-" + date.getDate();
+		},
+
+		formatTitle: function(date, monthNames, names, pad) {
+			return monthNames[date.getMonth()] + ', ' +
+				names[date.getDay()] + ' ' +
+				pad(date.getDate()) + ', ' +
+				date.getFullYear();
+		},
+
+		pad: function(n) {
+			return (n < 10) ? ("0" + n) : n;
 		}
 	};
 

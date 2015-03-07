@@ -75,6 +75,7 @@
     width: 100%;
 
     table-layout: fixed;
+    outline: none;
 }
 
 .l-calendar th
