@@ -158,7 +158,7 @@
 			this.instanceManager.setCurrent(inst);
 
 		},
-		isPopup: function($target){
+		isPopup: function($target) {
 			return $target.parents('#' + this.popupID).length > 0;
 		},
 		_findPos: function(obj) {
@@ -218,13 +218,13 @@
 
 			return headerHtml + contentHtml;
 		},
-		
-		_convertHolydays: function(holidays){
-			if(holidays.length === 0 || $.isNumeric(holidays[0])){
+
+		_convertHolydays: function(holidays) {
+			if (holidays.length === 0 || $.isNumeric(holidays[0])) {
 				return holidays;
 			}
 			temp = [];
-			$.each(holidays, function(index, item){
+			$.each(holidays, function(index, item) {
 				temp.push(calendar.normalize(item).getTime());
 			});
 			return temp;
@@ -288,13 +288,6 @@
 
 	//render logic
 	var calendar = {
-		firstDayOfMonth: function(date) {
-			return new DATE(
-				date.getFullYear(),
-				date.getMonth(),
-				1
-			);
-		},
 		name: 'MONTH',
 		title: function(date, options) {
 			return options.monthNames[date.getMonth()] + " " + date.getFullYear();
@@ -310,14 +303,19 @@
 				monthShort = options.monthNamesShort,
 				maxDays = options.maxDays,
 				leadingRows = options.leadingRows,
-				start = that.firstVisibleDay(),
+				start = that.firstVisibleDay(leadingRows),
 				toDateString = that.toDateString,
 				normalize = that.normalize,
 				today = new Date(),
 				html = '<div class="l-grid-header"><table tabindex="0" class="l-grid" cellspacing="0"><thead><tr>';
 
 			for (; idx < 7; idx++) {
-				html += '<th scope="col" title="' + names[idx] + '">' + shortNames[idx] + '</th>';
+				var className = "";
+				var weekDayIndex = idx === 6 ? 0 : idx + 1;
+				if (weekends.indexOf(weekDayIndex) !== -1) {
+					className = "l-disable";
+				}
+				html += '<th scope="col" title="' + names[idx] + '" class="' + className +'">' + shortNames[idx] + '</th>';
 			}
 
 			today = new Date(today.getFullYear(), today.getMonth(), today.getDate()); //only date
@@ -378,14 +376,17 @@
 			});
 		},
 
-		firstWeekDay: function(date) {
-			var first = date.getDate() - date.getDay() + 1; // First day is the day of the month - the day of the week
+		firstWeekDay: function(date, leadingRows) {
+			if (date.getDay() === 0) {
+				leadingRows = leadingRows + 1;
+			}
+			var first = date.getDate() - date.getDay() + 1 - leadingRows * 7; // First day is the day of the month - the day of the week
 			return new Date(date.setDate(first));
 		},
 
-		firstVisibleDay: function() {
+		firstVisibleDay: function(leadingRows) {
 			var curr = new Date();
-			return this.firstWeekDay(curr);
+			return this.firstWeekDay(curr, leadingRows);
 		},
 
 		normalize: function(date) {
@@ -414,10 +415,10 @@
 
 		for (; idx < length; idx++) {
 			if (idx > 0 && idx % cellsPerRow === 0) {
-				html += '</tr><tr role="row">';
+				html += '</tr><tr>';
 			}
 			data = build(start, idx);
-			
+
 			html += content(data);
 			setter(start, 1);
 		}
@@ -491,7 +492,7 @@
 			var $target = $(event.target);
 			var inst = this._instanceManager.get($target[0]);
 
-			if (!$target.hasClass(this.markerClassName) && 
+			if (!$target.hasClass(this.markerClassName) &&
 				!this._instanceManager.compare(inst) &&
 				!this._popupManager.isPopup($target)) {
 				this.close();
