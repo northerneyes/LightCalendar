@@ -10,6 +10,7 @@
     padding: 3px;
 }
 
+
 .l-calendar .l-content,
 .l-calendar .l-content th {
     text-align: center;
@@ -17,20 +18,32 @@
 
 .l-calendar td {
     padding: 0.08333em;
+}
+
+.l-calendar td:not(.l-disable) {
     cursor: pointer;
+}
+
+.l-calendar td:not(.l-disable) a {
+    cursor: pointer;
+}
+
+.l-calendar .l-link {
+    cursor: default;
 }
 
 .l-calendar td, .l-calendar .l-link {
     text-decoration: none;
     color: black;
+    outline: none;
 }
 
 
 .l-calendar .l-content {
     /*float: left;*/
-    border-spacing: 0px;
+    /*border-spacing: 0px;*/
     width: 100%;
-    height: 14.167em;
+    /*height: 14.167em;*/
     border-width: 0px;
     margin: 0px;
     table-layout: fixed;
@@ -100,12 +113,21 @@ td, th {
 }
 
 .l-grid-content{
-     height: 14.167em;
-     overflow: auto;
+    height: 14.167em;
+    position: relative;
+    width: 100%;
+    overflow: auto;
+    overflow-x: auto;
+    overflow-y: scroll;
+    zoom: 1;
 }
-
+/*
 .l-grid-content::-webkit-scrollbar { 
     display: none; 
+}*/
+
+.l-grid-header{
+    padding-right: 16px;
 }
 
 .l-grid-content td:not(.l-disable):hover{
