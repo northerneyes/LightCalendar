@@ -465,10 +465,15 @@
 			showOn: "focus", // "focus" for popup on focus,
 			showAnim: "fadeIn", // Name of jQuery animation for popup
 			duration: "fast", // Duration of display/closure
+
+			inputCss: "",
+			labelCss: "",
+			label: "",
+
 			weekends: [0],
-			holidays: [new Date(2015, 2, 11)],
+			holidays: [],
 			maxDays: MAX_DAYS,
-			leadingRows: 2
+			leadingRows: 2,
 		};
 
 		$.extend(this._defaults, this.regional[""]);
@@ -481,10 +486,24 @@
 	$.extend(LightCalendar.prototype, {
 		markerClassName: "hasCalendar",
 
-		init: function(elements, options) {
+		init: function($divs, options) {
 			var that = this;
-			this._instanceManager.init(elements, options);
-			this._popupManager.init(elements);
+			if($divs.length === 0)
+				return;
+
+			var calendarTemplate = template('<label for="<%= inputID%>" class="<%= labelCss%>"><%= label%></label>' +
+			'<input id="<%= inputID%>" type="text" class="<%= inputCss%>"></input>');
+
+			$divs.empty().append(calendarTemplate({
+				inputID: $divs.attr('id') + "Input",
+				label: options.label || that._defaults.label,
+				labelCss: options.labelCss || that._defaults.labelCss,
+				inputCss: options.inputCss || that._defaults.inputCss,
+			}));        
+
+			var $elements = $divs.find('input');
+			this._instanceManager.init($elements, options);
+			this._popupManager.init($elements);
 
 
 			if (!this.initialized) {
@@ -494,7 +513,7 @@
 				this.initialized = true;
 			}
 
-			elements.each(function() {
+			$elements.each(function() {
 				that._connectCalendar(this);
 			});
 			return this;
