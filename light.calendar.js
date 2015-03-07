@@ -11,19 +11,22 @@
 }(function($) {
 	var PROP_NAME = "lightcalendar";
 
-	function InstanceManager(container, elements, options, defaultOptions) {
-		var that = this;
+	function InstanceManager(container, defaultOptions) {
+
 		this.curInst = null; // The current instance in use
-		this.elements = elements;
 		this.defaultOptions = defaultOptions;
 		this.container = container;
 
-		this.elements.each(function() {
-			that.create(this, options);
-		});
 	}
 
 	$.extend(InstanceManager.prototype, {
+		init: function(elements, options) {
+			var that = this;
+			elements.each(function() {
+				that.create(this, options);
+			});
+		},
+
 		create: function(target, options) {
 			var nodeName = target.nodeName.toLowerCase();
 			var inst = this.new($(target));
@@ -68,7 +71,7 @@
 	});
 
 	//Popup manager
-	function PopupManager(container, instanceManager, defaultOptions) {
+	function PopupManager(container, instanceManager) {
 		var that = this;
 		this.initialized = false;
 		this.instanceManager = instanceManager;
@@ -79,20 +82,29 @@
 
 		this.container.attr('id', this.popupID);
 
-		if (!this.initialized) {
-			$(document).mousedown(function(event){
-				that.checkExternalClick(event)
-			});
-			this.initialized = true;
-		}
-
-		if ($("#" + this.popupID).length === 0) {
-			$("body").append(this.container);
-		}
 	}
 
 	$.extend(PopupManager.prototype, {
 		markerClassName: "hasPopup",
+		init: function(elements) {
+			var that = this;
+
+			if (!this.initialized) {
+				$(document).mousedown(function(event) {
+					that.checkExternalClick(event);
+				});
+				this.initialized = true;
+			}
+
+			if ($("#" + this.popupID).length === 0) {
+				$("body").append(this.container);
+			}
+
+			elements.each(function() {
+				that.connectPopup(this);
+			});
+		},
+
 		checkExternalClick: function(event) {
 			var currInst = this.instanceManager.getCurrent();
 			if (!currInst) {
@@ -108,10 +120,27 @@
 
 		},
 
+		connectPopup: function(target) {
+			var that = this;
+			var element = $(target);
+
+			if (element.hasClass(this.markerClassName)) {
+				return;
+			}
+
+			var openPopupHandler = function(event) {
+				that.open(event);
+			};
+
+			element.unbind("focus", openPopupHandler);
+			element.focus(openPopupHandler);
+			element.addClass(this.markerClassName);
+		},
+
 		close: function() {
 			var inst = this.instanceManager.getCurrent();
-			
-			if (!inst ) {
+
+			if (!inst) {
 				return;
 			}
 
@@ -139,7 +168,7 @@
 			var isOtherInstance = !this.instanceManager.compare(inst);
 			var prevCalendarIsShowing = inst && this.popupShowing;
 			if (isOtherInstance && prevCalendarIsShowing) {
-				this.close(this.curInst.input[0]);
+				this.close(this.instanceManager.getCurrent().input[0]);
 			}
 
 			this.lastElement = element;
@@ -169,9 +198,9 @@
 
 			inst.container[showAnim || "show"](showAnim ? duration : null);
 
-			if (inst.input.is(":visible") && !inst.input.is(":disabled")) {
-				inst.input.focus();
-			}
+			// if (inst.input.is(":visible") && !inst.input.is(":disabled")) {
+			// 	inst.input.focus();
+			// }
 
 			this.popupShowing = true;
 			this.instanceManager.setCurrent(inst);
@@ -194,39 +223,42 @@
 	//Main
 	function LightCalendar() {
 		this.container = $('<div class="l-calendar" style="display: none" >123<div>');
+		this.regional = []; // Available regional settings, indexed by language code
+		this.regional[""] = { // Default regional settings
+			monthNames: ["January", "February", "March", "April", "May", "June",
+				"July", "August", "September", "October", "November", "December"
+			], // Names of months for formatting
+			monthNamesShort: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"], // For formatting
+			dayNames: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"], // For formatting
+			dayNamesShort: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"], // For formatting
+			dayNamesMin: ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"], // Column headings for days starting at Sunday
+			weekHeader: "Wk", // Column header for week of the year
+			dateFormat: "mm/dd/yy", // See format options on parseDate
+			firstDay: 0, // The first day of the week, Sun = 0, Mon = 1, ...
+		};
+
+		this._defaults = { // Global defaults for all the date picker instances
+			showOn: "focus", // "focus" for popup on focus,
+			showAnim: "fadeIn", // Name of jQuery animation for popup
+			duration: "fast", // Duration of display/closure
+			defaultDate: null, // Used when field is blank: actual date,
+			// +/-number for offset from today, null for today
+			onSelect: null, // Define a callback function when a date is selected
+			onClose: null // Define a callback function when the datepicker is closed
+		};
+
+		$.extend(this._defaults, this.regional[""]);
+
+		this._instanceManager = new InstanceManager(this.container, this._defaults);
+		this._popupManager = new PopupManager(this.container, this._instanceManager);
+
 	}
 
 	$.extend(LightCalendar.prototype, {
 		init: function(elements, options) {
 			var that = this;
-			this.regional = []; // Available regional settings, indexed by language code
-			this.regional[""] = { // Default regional settings
-				monthNames: ["January", "February", "March", "April", "May", "June",
-					"July", "August", "September", "October", "November", "December"
-				], // Names of months for formatting
-				monthNamesShort: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"], // For formatting
-				dayNames: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"], // For formatting
-				dayNamesShort: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"], // For formatting
-				dayNamesMin: ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"], // Column headings for days starting at Sunday
-				weekHeader: "Wk", // Column header for week of the year
-				dateFormat: "mm/dd/yy", // See format options on parseDate
-				firstDay: 0, // The first day of the week, Sun = 0, Mon = 1, ...
-			};
-
-			this._defaults = { // Global defaults for all the date picker instances
-				showOn: "focus", // "focus" for popup on focus,
-				showAnim: "fadeIn", // Name of jQuery animation for popup
-				duration: "fast", // Duration of display/closure
-				defaultDate: null, // Used when field is blank: actual date,
-				// +/-number for offset from today, null for today
-				onSelect: null, // Define a callback function when a date is selected
-				onClose: null // Define a callback function when the datepicker is closed
-			};
-
-			$.extend(this._defaults, this.regional[""]);
-
-			this._instanceManager = new InstanceManager(this.container, elements, options, this._defaults);
-			this._popupManager = new PopupManager(this.container, this._instanceManager);
+			this._instanceManager.init(elements, options);
+			this._popupManager.init(elements);
 			// this.calendar = new Calendar(instanceManager);
 			return this;
 		},
