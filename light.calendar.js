@@ -227,7 +227,7 @@
 				// lastDayOfMonth = that.last(date),
 				toDateString = that.toDateString,
 				today = new Date(),
-				html = '<table tabindex="0" class="l-content" cellspacing="0"><thead><tr>';
+				html = '<div class="l-grid-header"><table tabindex="0" class="l-grid" cellspacing="0"><thead><tr>';
 
 			for (; idx < 7; idx++) {
 				html += '<th scope="col" title="' + names[idx] + '">' + shortNames[idx] + '</th>';
@@ -236,9 +236,9 @@
 			today = new Date(today.getFullYear(), today.getMonth(), today.getDate()); //only date
 
 			return view({
-				cells: 42, // i think need to 180
+				cells: 80, // i think need to 180
 				perRow: 7,
-				html: html += '</tr></thead><tbody><tr>',
+				html: html += '</tr></thead><tbody><tr></tr></tbody></table></div> <div class="l-grid-content"><table tabindex="0" class="l-content" cellspacing="0"><tr>',
 				start: new Date(start.getFullYear(), start.getMonth(), start.getDate()),
 				// min: new Date(min.getFullYear(), min.getMonth(), min.getDate()),
 				// max: new DATE(max.getFullYear(), max.getMonth(), max.getDate()),
@@ -259,6 +259,7 @@
 					if (+date === today) {
 						cssClass.push("l-today");
 					}
+					
 					if (day === 0 || day === 6) {
 						cssClass.push("l-weekend");
 						cssClass.push("l-disable");
@@ -268,7 +269,7 @@
 					}
 
 					if(date.getDate() === 1){
-						monthName = monthShort[today.getMonth()];
+						monthName = monthShort[date.getMonth()];
 						cssClass.push("l-start-month");
 					}
 					// if (hasUrl && inArray(+date, dates)) {
@@ -349,7 +350,7 @@
 			html += content(data);
 			setter(start, 1);
 		}
-		return html + "</tr></tbody></table>";
+		return html + "</tr></tbody></table></div>";
 	}
 
 
