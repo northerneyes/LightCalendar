@@ -180,24 +180,18 @@
 		that.listener = [];
 
 
-		that.cellTemplate = template('<td <%= cssClass%> ><% if(monthName !== "") { %><a> <%= monthName %> </a> <%}%><a tabindex="-1" class="l-link" href="\\#" data-value="<%= dateString %>"> <%= value %> </a></td>');
+		that.cellTemplate = template('<td <%= cssClass%> ><% if(monthName !== "") { %><span> <%= monthName %> </span> <%}%><a tabindex="-1" class="l-link" href="\\#" data-value="<%= dateString %>"> <%= value %> </a></td>');
 		that.headerTemplate = template('<div class="l-header"><%= month%></div>')
-			// that._templates();
-			// that._header();
 		calendar.defaultsOptions = defaultsOptions;
 	}
 
 
 	$.extend(Calendar.prototype, {
-		// _header: function(){
-
-		// },
 		update: function(element) {
 			var inst = this._instanceManager.get(element);
 			this._container.unbind();
 			this._container.empty().append(this._generateHTML(inst));
 			this._attachHandlers(inst);
-
 		},
 		_generateHTML: function(inst) {
 			inst.options.content = this.cellTemplate;
@@ -226,20 +220,35 @@
 		_attachHandlers: function(inst) {
 			var that = this;
 			this._container.on('click', CELLSELECTOR, function(e) {
-				var link = e.currentTarget.firstChild;
-				if ($(e.currentTarget).hasClass('l-disable')) {
+				var $link = $(e.currentTarget).find('.l-link');
+				if ($(e.currentTarget).hasClass('l-disable') && link.length) {
 					e.preventDefault();
 					return;
 				}
-				that._click(link, inst);
+
+				that._click($link, inst);
 			});
 		},
-		_click: function(link, inst) {
-			var value = $(link).data('value').split("-");
+		_click: function($link, inst) {
+			var value = $link.data('value').split("-");
 
 			value = new Date(value[0], value[1], value[2]);
 
 			this.emit("change", [value, inst]);
+		},
+
+		scrollToSelectedDate: function(inst) {
+			var $selected = this._container.find('.l-state-selected');
+			if ($selected.length) {
+
+				var $gridContent = this._container.find('.l-grid-content');
+				var selectedPos = $selected.offset().top;
+				var gridContentPos = $gridContent.offset().top;
+				$gridContent.animate({
+					scrollTop: selectedPos - gridContentPos - 60
+				}, 0, function() {});
+			}
+
 		}
 	});
 
@@ -311,10 +320,10 @@
 					if (date < today) {
 						cssClass.push("l-disable");
 					}
-					
-					if(selectedDate ){
+
+					if (selectedDate) {
 						var select = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
-						if(select.getTime() === date.getTime()){
+						if (select.getTime() === date.getTime()) {
 							cssClass.push("l-state-selected");
 						}
 					}
@@ -329,7 +338,7 @@
 					// }
 					return {
 						date: date,
-						monthName: monthName,
+						monthName: monthName.toUpperCase(),
 						// dates: dates,
 						// title: kendo.toString(date, "D", culture),
 						value: date.getDate(),
@@ -451,9 +460,9 @@
 
 
 			if (!this.initialized) {
-				// $(document).mousedown(function(event) {
-				// 	that.checkExternalClick(event);
-				// });
+				$(document).mousedown(function(event) {
+					that.checkExternalClick(event);
+				});
 				this.initialized = true;
 			}
 
@@ -502,7 +511,7 @@
 				that.calendar = new Calendar(that._defaults, that.container, that._instanceManager);
 				that.calendar.register({
 					change: function(date, inst) {
-						
+
 						that.setDate(date, inst);
 					}
 				});
@@ -510,7 +519,7 @@
 			that.calendar.update(element);
 		},
 
-		setDate: function(date, inst){
+		setDate: function(date, inst) {
 			inst.date = date;
 			var dateString = date.getFullYear() + "-" + date.getMonth() + "-" + date.getDate();
 			$(inst.input).val(dateString);
@@ -528,6 +537,7 @@
 
 			this._calendar(element);
 			this._popupManager.open(element);
+			this.calendar.scrollToSelectedDate(element);
 		},
 
 		close: function() {
