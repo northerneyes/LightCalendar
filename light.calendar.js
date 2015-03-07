@@ -10,6 +10,8 @@
 	}
 }(function($) {
 	var PROP_NAME = "lightcalendar";
+	var CELLSELECTOR = "td:has(.l-link)";
+
 	var MS_PER_DAY = 86400000;
 
 	function InstanceManager(container, defaultOptions) {
@@ -175,12 +177,14 @@
 		that._instanceManager = instanceManager;
 		that._container = container;
 		that.defaultsOptions = defaultsOptions;
-		calendar.defaultsOptions = defaultsOptions;
+		that.listener = [];
+
 
 		that.cellTemplate = template('<td <%= cssClass%> ><% if(monthName !== "") { %><a> <%= monthName %> </a> <%}%><a tabindex="-1" class="l-link" href="\\#" data-value="<%= dateString %>"> <%= value %> </a></td>');
-		// that._templates();
-		// that._header();
-
+		that.headerTemplate = template('<div class="l-header"><%= month%></div>')
+			// that._templates();
+			// that._header();
+		calendar.defaultsOptions = defaultsOptions;
 	}
 
 
@@ -190,12 +194,52 @@
 		// },
 		update: function(element) {
 			var inst = this._instanceManager.get(element);
+			this._container.unbind();
 			this._container.empty().append(this._generateHTML(inst));
+			this._attachHandlers(inst);
 
 		},
 		_generateHTML: function(inst) {
 			inst.options.content = this.cellTemplate;
-			return calendar.content(inst.options)
+			inst.options.date = inst.date;
+			var contentHtml = calendar.content(inst.options);
+			var header = calendar.title(inst.date || new Date());
+			var headerHtml = this.headerTemplate({
+				month: header.toUpperCase()
+			});
+
+			return headerHtml + contentHtml;
+		},
+
+		register: function(listener) {
+			this.listener.push(listener);
+		},
+
+		emit: function(eventName, args) {
+			$.each(this.listener, function(index, listener) {
+				if (listener[eventName]) {
+					listener[eventName].apply(this, args);
+				}
+			});
+		},
+
+		_attachHandlers: function(inst) {
+			var that = this;
+			this._container.on('click', CELLSELECTOR, function(e) {
+				var link = e.currentTarget.firstChild;
+				if ($(e.currentTarget).hasClass('l-disable')) {
+					e.preventDefault();
+					return;
+				}
+				that._click(link, inst);
+			});
+		},
+		_click: function(link, inst) {
+			var value = $(link).data('value').split("-");
+
+			value = new Date(value[0], value[1], value[2]);
+
+			this.emit("change", [value, inst]);
 		}
 	});
 
@@ -211,12 +255,12 @@
 		},
 		name: 'MONTH',
 		title: function(date) {
-			return defaultsOptions.monthNames[date.getMonth()] + " " + date.getFullYear();
+			return this.defaultsOptions.monthNames[date.getMonth()] + " " + date.getFullYear();
 		},
 		content: function(options) {
 			var that = this,
 				idx = 0,
-				date = options.date,
+				selectedDate = options.date,
 				holidays = options.holidays,
 				// firstDayIdex = firstDay,
 				names = that.defaultsOptions.dayNames,
@@ -236,7 +280,7 @@
 			today = new Date(today.getFullYear(), today.getMonth(), today.getDate()); //only date
 
 			return view({
-				cells: 80, // i think need to 180
+				cells: 180, // i think need to 180
 				perRow: 7,
 				html: html += '</tr></thead><tbody><tr></tr></tbody></table></div> <div class="l-grid-content"><table tabindex="0" class="l-content" cellspacing="0"><tr>',
 				start: new Date(start.getFullYear(), start.getMonth(), start.getDate()),
@@ -249,8 +293,8 @@
 					var cssClass = [],
 						day = date.getDay(),
 						monthName = "";
-						// linkClass = "",
-						// url = "#";
+					// linkClass = "",
+					// url = "#";
 
 					// if (date < firstDayOfMonth || date > lastDayOfMonth) {
 					// 	cssClass.push(OTHERMONTH);
@@ -259,16 +303,23 @@
 					if (+date === today) {
 						cssClass.push("l-today");
 					}
-					
+
 					if (day === 0 || day === 6) {
 						cssClass.push("l-weekend");
 						cssClass.push("l-disable");
 					}
-					if(date < today){
+					if (date < today) {
 						cssClass.push("l-disable");
 					}
+					
+					if(selectedDate ){
+						var select = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+						if(select.getTime() === date.getTime()){
+							cssClass.push("l-state-selected");
+						}
+					}
 
-					if(date.getDate() === 1){
+					if (date.getDate() === 1) {
 						monthName = monthShort[date.getMonth()];
 						cssClass.push("l-start-month");
 					}
@@ -312,7 +363,7 @@
 		},
 		setDate: function(date, value) {
 			//next date
-			date.setTime(date.getTime() + value*MS_PER_DAY);
+			date.setTime(date.getTime() + value * MS_PER_DAY);
 		},
 		toDateString: function(date) {
 			return date.getFullYear() + "-" + date.getMonth() + "-" + date.getDate();
@@ -446,10 +497,25 @@
 		},
 
 		_calendar: function(element) {
-			if (!this.calendar) {
-				this.calendar = new Calendar(this._defaults, this.container, this._instanceManager);
+			var that = this;
+			if (!that.calendar) {
+				that.calendar = new Calendar(that._defaults, that.container, that._instanceManager);
+				that.calendar.register({
+					change: function(date, inst) {
+						
+						that.setDate(date, inst);
+					}
+				});
 			}
-			this.calendar.update(element);
+			that.calendar.update(element);
+		},
+
+		setDate: function(date, inst){
+			inst.date = date;
+			var dateString = date.getFullYear() + "-" + date.getMonth() + "-" + date.getDate();
+			$(inst.input).val(dateString);
+
+			this._popupManager.close();
 		},
 
 		setOptions: function() {
