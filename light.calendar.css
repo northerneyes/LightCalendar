@@ -1,0 +1,190 @@
+.l-calendar
+{
+    font-weight: normal;
+
+    display: inline-block;
+
+    width: 20em;
+    padding: 3px;
+
+    color: #444;
+    border-color: #fefefe;
+    background-color: #fefefe;
+    box-shadow: 0 1px 2px 1px rgba(0, 0, 0, .1), 0 2px 5px rgba(0, 0, 0, .1);
+}
+
+
+.l-calendar .l-content,
+.l-calendar .l-content th
+{
+    text-align: center;
+}
+
+.l-calendar td:not(.l-disable)
+{
+    cursor: pointer;
+}
+
+.l-calendar td:not(.l-disable) a
+{
+    cursor: pointer;
+}
+
+.l-calendar .l-link
+{
+    cursor: default;
+}
+
+.l-calendar .l-holyday
+{
+    background: rgb(242, 242, 242);
+}
+
+.l-calendar .l-link
+{
+    text-decoration: none;
+
+    color: black;
+    outline: none;
+}
+
+.l-calendar .l-state-selected > a
+{
+    color: white;
+}
+
+.l-calendar .l-state-selected
+{
+    background: #421e4e;
+}
+
+
+.l-calendar .l-content
+{
+    width: 100%;
+    margin: 0;
+
+    table-layout: fixed;
+
+    border-width: 0;
+    outline: 0 none;
+}
+
+.l-calendar table
+{
+    width: 100%;
+
+    table-layout: fixed;
+    outline: none;
+}
+
+.l-calendar th
+{
+    text-align: center;
+}
+
+
+.l-calendar th
+{
+    background-color: #ebebeb;
+}
+
+.l-calendar th
+{
+    font-weight: normal;
+
+    padding: .4em .45em .4em .1em;
+
+    cursor: default;
+
+    border-bottom-width: 1px;
+    border-bottom-style: solid;
+}
+
+.l-calendar .l-header
+{
+    position: relative;
+
+    padding: 5px;
+
+    text-align: center;
+}
+
+.l-header
+{
+    font-weight: 500;
+
+    color: #2e2e2e;
+    border-color: #c5c5c5;
+    background-color: #e3e3e3;
+    background-image: none, linear-gradient(to bottom, rgba(255, 255, 255, .6) 0px, rgba(255, 255, 255, 0) 100%);
+    background-position: 50% 50%;
+}
+
+.l-disable
+{
+    opacity: .4;
+}
+
+td,
+th
+{
+    height: 2.5em;
+
+    border: 1px solid #e7e6e7;
+}
+
+.l-start-month
+{
+    padding-top: 7px;
+}
+
+.l-calendar .l-start-month > span
+{
+    font-size: .77em;
+    line-height: 1.0em;
+
+    left: 0;
+
+    float: left;
+
+    width: 10px;
+    margin-top: -9px;
+    margin-left: -2px;
+    padding: 2px 2px 3px 1px;
+
+    word-wrap: break-word;
+
+    color: white;
+    background: rgb(0, 0, 0);
+}
+
+.l-grid-header
+{
+    width: 100%;
+
+    background-color: #ebebeb;
+}
+
+.l-grid-content
+{
+    position: relative;
+
+    overflow: auto;
+    overflow-x: auto;
+    overflow-y: scroll;
+    zoom: 1;
+
+    width: 100%;
+    height: 20em;
+}
+
+.l-grid-header
+{
+    padding-right: 1em;
+}
+
+.l-grid-content td:not(.l-disable):hover
+{
+    background: #d1bdd8;
+}
