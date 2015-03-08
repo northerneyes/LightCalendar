@@ -22,11 +22,9 @@
 	}
 
 	$.extend(InstanceManager.prototype, {
-		init: function(elements, options) {
+		init: function($element, options) {
 			var that = this;
-			elements.each(function() {
-				that.create(this, options);
-			});
+			that.create($element[0], options);
 		},
 
 		create: function(target, options) {
@@ -59,6 +57,10 @@
 		},
 
 		get: function(target) {
+			if (!target) {
+				return;
+			}
+
 			try {
 				return $.data(target, PROP_NAME);
 			} catch (err) {
@@ -87,7 +89,7 @@
 	}
 
 	$.extend(PopupManager.prototype, {
-		init: function(elements) {
+		init: function() {
 			var that = this;
 
 			if ($("#" + this.popupID).length === 0) {
@@ -474,6 +476,7 @@
 			holidays: [],
 			maxDays: MAX_DAYS,
 			leadingRows: 2,
+			date: null
 		};
 
 		$.extend(this._defaults, this.regional[""]);
@@ -486,61 +489,71 @@
 	$.extend(LightCalendar.prototype, {
 		markerClassName: "hasCalendar",
 
-		init: function($divs, options) {
+		_init: function($div, options, args) {
 			var that = this;
-			if($divs.length === 0)
-				return;
 
-			var calendarTemplate = template('<label for="<%= inputID%>" class="<%= labelCss%>"><%= label%></label>' +
-			'<input id="<%= inputID%>" type="text" class="<%= inputCss%>"></input>');
+			//find instance
+			var $input = $div.find('input');
+			var instance = that._instanceManager.get($input[0]);
+			if (instance) {
+				if (typeof options === 'string') {
+					that[options].apply(that, [$input, instance].concat(args));
+				}
 
-			$divs.empty().append(calendarTemplate({
-				inputID: $divs.attr('id') + "Input",
-				label: options.label || that._defaults.label,
-				labelCss: options.labelCss || that._defaults.labelCss,
-				inputCss: options.inputCss || that._defaults.inputCss,
-			}));        
+			} else { //create
+				var calendarTemplate = template('<label for="<%= inputID%>" class="<%= labelCss%>"><%= label%></label>' +
+					'<input id="<%= inputID%>" type="text" class="<%= inputCss%>"></input>');
 
-			var $elements = $divs.find('input');
-			this._instanceManager.init($elements, options);
-			this._popupManager.init($elements);
+				$div.empty().append(calendarTemplate({
+					inputID: $div.attr('id') + "Input",
+					label: options.label || that._defaults.label,
+					labelCss: options.labelCss || that._defaults.labelCss,
+					inputCss: options.inputCss || that._defaults.inputCss,
+				}));
+
+				var $element = $div.find('input');
+				that._instanceManager.init($element, options);
+				that._popupManager.init();
 
 
-			if (!this.initialized) {
-				$(document).mousedown(function(event) {
-					that.checkExternalClick(event);
-				});
-				this.initialized = true;
+				if (!that.initialized) {
+					$(document).mousedown(function(event) {
+						that._checkExternalClick(event);
+					});
+					that.initialized = true;
+				}
+
+				that._connectCalendar($element);
+
+				if (options.date) {
+					that.date($element, that._instanceManager.get($element[0]), options.date);
+				}
 			}
 
-			$elements.each(function() {
-				that._connectCalendar(this);
-			});
-			return this;
 		},
 
-		checkExternalClick: function(event) {
-			var currInst = this._instanceManager.getCurrent();
+		_checkExternalClick: function(event) {
+			var that = this;
+			var currInst = that._instanceManager.getCurrent();
 			if (!currInst) {
 				return;
 			}
 
 			var $target = $(event.target);
-			var inst = this._instanceManager.get($target[0]);
+			var inst = that._instanceManager.get($target[0]);
 
-			if (!$target.hasClass(this.markerClassName) &&
-				!this._instanceManager.compare(inst) &&
-				!this._popupManager.isPopup($target)) {
-				this.close();
+			if (!$target.hasClass(that.markerClassName) &&
+				!that._instanceManager.compare(inst) &&
+				!that._popupManager.isPopup($target)) {
+				that.close();
 			}
 
 		},
 
-		_connectCalendar: function(target) {
+		_connectCalendar: function($element) {
 			var that = this;
-			var element = $(target);
 
-			if (element.hasClass(this.markerClassName)) {
+			if ($element.hasClass(that.markerClassName)) {
 				return;
 			}
 
@@ -548,35 +561,40 @@
 				that.open($(event.target));
 			};
 
-			element.unbind("focus", openHandler);
-			element.focus(openHandler);
+			$element.unbind("focus", openHandler);
+			$element.focus(openHandler);
 
-			element.addClass(this.markerClassName);
+			$element.addClass(that.markerClassName);
 		},
 
-		_calendar: function(element) {
+		_calendar: function() {
 			var that = this;
 			if (!that.calendar) {
 				that.calendar = new Calendar(that.container, that._instanceManager);
 				that.calendar.register({
 					change: function(date, inst) {
-
-						that.setDate(date, inst);
+						that.date($(inst.input), inst, date);
 					}
 				});
 			}
-			that.calendar.update(element);
+			return that.calendar;
+
 		},
 
-		setDate: function(date, inst) {
+		date: function($input, inst, date) {
 			inst.date = date;
-			var dateString = this.calendar.format(date);
-			$(inst.input).val(dateString);
-
+			var dateString = this._calendar().format(date);
+			$input.val(dateString);
 			this._popupManager.close();
 		},
 
-		setOptions: function() {
+		options: function($input, inst, options) {
+			var that = this;
+			$.extend(inst.options, options);
+			if (options.date) {
+				that.date($input, that._instanceManager.get($input[0]), options.date);
+			}
+			this._popupManager.close();
 
 		},
 
@@ -584,7 +602,7 @@
 			var element = $element[0];
 			element = element.target || element;
 
-			this._calendar(element);
+			this._calendar().update(element);
 			this._popupManager.open(element);
 			this.calendar.scrollToSelectedDate(element);
 		},
@@ -633,7 +651,16 @@
 
 	/* Invoke the calendar functionality.*/
 	$.fn.lightcalendar = function(options) {
-		return $.lightcalendar.init(this, options);
+		var $divs = this;
+		if (!$divs.length) {
+			return $divs;
+		}
+
+		var args = Array.prototype.slice.call(arguments, 1);
+		return $divs.each(function() {
+			var $item = $(this);
+			$.lightcalendar._init($item, options, args);
+		});
 	};
 
 	$.lightcalendar = new LightCalendar(); // singleton instance

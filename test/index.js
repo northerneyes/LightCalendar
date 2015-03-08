@@ -28,4 +28,35 @@ $(document).ready(function() {
 		inputCss: 'form-control',
 		leadingRows: 4
 	});
+
+	var presetDateCalendar = $('#presetDateCalendar').lightcalendar({
+		label: 'Calendar with a preset date',
+		inputCss: 'form-control',
+		date: new Date()
+	});
+
+	var setDateAfterInitCalendar = $('#setDateAfterInitCalendar').lightcalendar({
+		label: 'Set date after init calendar',
+		inputCss: 'form-control'
+	});
+	setDateAfterInitCalendar.lightcalendar("date", new Date());
+
+	var setOptionsAfterInitCalendar = $('#setOptionsAfterInitCalendar').lightcalendar({
+		label: 'Set some options after init calendar',
+		inputCss: 'form-control'
+	});
+
+	setOptionsAfterInitCalendar.lightcalendar("options", {
+		leadingRows: 4,
+		holidays: [
+			new Date(2015, 2, 16),
+			new Date(2015, 2, 19),
+			new Date(2015, 2, 24),
+			new Date(2015, 2, 27),
+			new Date(2015, 3, 2)
+		],
+		date: new Date(2015, 2, 26),
+		weekends: [0, 6]
+	});
+
 });
