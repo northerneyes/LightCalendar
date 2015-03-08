@@ -227,7 +227,7 @@
 			}
 			temp = [];
 			$.each(holidays, function(index, item) {
-				temp.push(calendar.normalize(item).getTime());
+				temp.push(normalize(item).getTime());
 			});
 			return temp;
 		},
@@ -280,17 +280,16 @@
 		},
 
 		format: function(date) {
-			var pad = calendar.pad;
 			return pad(date.getDate()) + "-" + pad(date.getMonth() + 1) + "-" + date.getFullYear();
-		},
-
-		_pad: function(n) {
-			return (n < 10) ? ("0" + n) : n;
 		}
 	});
 
-	//render logic
+
 	var calendar = {
+		setDate: function(date, value) {
+			//next date
+			date.setTime(date.getTime() + value * MS_PER_DAY);
+		},
 		name: 'MONTH',
 		title: function(date, options) {
 			return options.monthNames[date.getMonth()] + " " + date.getFullYear();
@@ -309,10 +308,8 @@
 				monthNames = options.monthNames,
 
 				title = that.formatTitle,
-				pad = that.pad,
 				start = that.firstVisibleDay(leadingRows),
 				toDateString = that.toDateString,
-				normalize = that.normalize,
 				today = new Date(),
 				html = '<div class="l-grid-header"><table tabindex="0" class="l-grid" cellspacing="0"><thead><tr>';
 
@@ -375,7 +372,7 @@
 					return {
 						date: date,
 						monthName: monthName.toUpperCase(),
-						title: title(date, monthNames, names, pad),
+						title: title(date, monthNames, names),
 						value: date.getDate(),
 						dateString: toDateString(date),
 						cssClass: cssClass[0] ? ' class="' + cssClass.join(" ") + '"' : "",
@@ -397,30 +394,26 @@
 			return this.firstWeekDay(curr, leadingRows);
 		},
 
-		normalize: function(date) {
-			return new Date(date.getFullYear(), date.getMonth(), date.getDate());
-		},
-
-		setDate: function(date, value) {
-			//next date
-			date.setTime(date.getTime() + value * MS_PER_DAY);
-		},
 
 		toDateString: function(date) {
 			return date.getFullYear() + "-" + date.getMonth() + "-" + date.getDate();
 		},
 
-		formatTitle: function(date, monthNames, names, pad) {
+		formatTitle: function(date, monthNames, names) {
 			return monthNames[date.getMonth()] + ', ' +
 				names[date.getDay()] + ' ' +
 				pad(date.getDate()) + ', ' +
 				date.getFullYear();
-		},
-
-		pad: function(n) {
-			return (n < 10) ? ("0" + n) : n;
 		}
 	};
+
+	function pad(n) {
+		return (n < 10) ? ("0" + n) : n;
+	}
+
+	function normalize(date) {
+		return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+	}
 
 	function view(options) {
 		var idx = 0,
@@ -447,7 +440,6 @@
 
 	//Main
 	function LightCalendar() {
-		var that = this;
 		this.initialized = false;
 
 		this.container = $('<div class="l-calendar" style="display: none" ><div>');
@@ -463,7 +455,7 @@
 
 		};
 
-		this._defaults = { // Global defaults for all the date picker instances
+		this._defaults = { // Global defaults for all the instances
 			showOn: "focus", // "focus" for popup on focus,
 			showAnim: "fadeIn", // Name of jQuery animation for popup
 			duration: "fast", // Duration of display/closure
